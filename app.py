@@ -24,6 +24,21 @@ def status():
         "total_count": total_count
     }
 
+@app.get("/hourly")
+def hourly():
+        df = pd.read_csv(csv_file)
+        df["timestamp"] = pd.to_datetime(
+            df["timestamp"], 
+            format="%Y-%m-%d-%H:%M:%S"
+        )
+        hourly_counts = (
+            df.groupby(
+                df["timestamp"].dt.hour, 
+            )
+            .size()
+        )
+        return hourly_counts.to_dict()
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
         df = pd.read_csv(csv_file)
@@ -49,29 +64,32 @@ def dashboard():
                     <head>
                         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                     </head>
+                    <canvas id="hourlyChart"></canvas>
+
                     <script>
 
                     fetch("/hourly")
                         .then(response => response.json())
-                        .then(data => {
+                        .then(data => {{
 
                             const labels = Object.keys(data);
                             const values = Object.values(data);
 
                             new Chart(
                                 document.getElementById("hourlyChart"), 
-                                {
+                                {{
                                     type: "bar",
-                                    data: {
+                                    data: {{
                                         labels: labels, 
-                                        datasets: [{
+
+                                        datasets: [{{
                                             label: "Traffic Count", 
                                             data: values
-                                        }]
-                                    }
-                                }
+                                        }}]
+                                    }}
+                                }}
                             );
-                        });
+                        }});
                     </script>
 
                         <body>
@@ -82,7 +100,6 @@ def dashboard():
                             <p>Total Count: {total_count}</p>
                             <h2>Hourly Statistics</h2>
                             {hourly_html}
-                            <canvas id="hourlyChart"></canvas>
                         </body>
                     </html>
                 """
