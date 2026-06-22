@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 app = FastAPI()
 from fastapi.responses import HTMLResponse
-import pandas as pd
+#import pandas as pd
+import sqlite3
 
 csv_file = "traffic_log.csv"
 
@@ -41,23 +42,52 @@ def hourly():
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
-        df = pd.read_csv(csv_file)
-        cars = len(df[df["type"] == "car"])
-        persons = len(df[df["type"] == "person"])
-        total_count = len(df)
-        df["timestamp"] = pd.to_datetime(
-            df["timestamp"], 
-            format="%Y-%m-%d-%H:%M:%S"
+        conn = sqlite3.connect("traffic.db")
+        cursor = conn.cursor()
+
+        # df = pd.read_csv(csv_file)
+        # total_count = len(df)
+        cursor.execute(
+                "SELECT COUNT(*) FROM traffic"
         )
-        hourly_counts = (
-            df.groupby(
-                df["timestamp"].dt.hour, 
-            )
-            .size()
+        total_count = cursor.fetchone()[0]
+        
+        # cars = len(df[df["type"] == "car"])
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM traffic
+            WHERE object_type = 'car'
+            """
         )
-        hourly_html = ""
-        for hour, count in hourly_counts.to_dict().items():
-            hourly_html += f"<p>{hour}時: {count}台</p>"
+        
+        cars = cursor.fetchone()[0]
+
+        # persons = len(df[df["type"] == "person"])
+        cursor.execute(
+            """
+            SELECT COUNT(*)
+            FROM traffic
+            WHERRE object_type = 'person'
+            """
+        )
+        persons = cursor.fetchone()[0]
+
+        # df["timestamp"] = pd.to_datetime(
+        #     df["timestamp"], 
+        #     format="%Y-%m-%d-%H:%M:%S"
+        # )
+        conn.close()
+
+        #hourly_counts = (
+        #    df.groupby(
+        #        df["timestamp"].dt.hour, 
+        #    )
+        #    .size()
+        #)
+        #hourly_html = ""
+        #for hour, count in hourly_counts.to_dict().items():
+        #    hourly_html += f"<p>{hour}時: {count}台</p>"
 
         return f"""
                     <html>

@@ -4,16 +4,18 @@ import csv
 from datetime import datetime
 import os
 import pandas as pd
+import sqlite3
 
-csv_file = "traffic_log.csv"
-if not os.path.exists(csv_file):
-    with open(csv_file, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([
-            "timestamp",
-            "id",
-            "type"
-        ])
+
+#csv_file = "traffic_log.csv"
+#if not os.path.exists(csv_file):
+#    with open(csv_file, "w", newline="") as f:
+#        writer = csv.writer(f)
+#        writer.writerow([
+#            "timestamp",
+#            "id",
+#            "type"
+#        ])
 
 model = YOLO("yolo11n.pt")
 
@@ -74,17 +76,33 @@ while cap.isOpened():
                 ):
                     total_count += 1
                     counted_ids.add(current_id)
+                    conn = sqlite3.connect("traffic.db")
+                    cursor = conn.cursor() 
+                    cursor.execute(
+                        """
+                        INSERT INTO traffic
+                        (timestamp, object_type)
+                        VALUES (?, ?)
+                        """,
+                        (
+                            datetime.now().strftime("%Y-%m-%d-%H:%M:%S"), 
+                            object_type
+                        )
+                    )
+                    conn.commit()
+                    conn.close()
+
                     print(
                         f"passed!{int(current_id)},"
                         f"Total:{total_count}"
                     )
-                    with open(csv_file, "a", newline="") as f:
-                        writer = csv.writer(f)
-                        writer.writerow([
-                            datetime.now().strftime("%Y-%m-%d-%H:%M:%S"), 
-                            current_id, 
-                            object_type
-                        ])
+                    #with open(csv_file, "a", newline="") as f:
+                    #    writer = csv.writer(f)
+                    #    writer.writerow([
+                    #        datetime.now().strftime("%Y-%m-%d-%H:%M:%S"), 
+                    #        current_id, 
+                    #        object_type
+                    #    ])
             previous_positions[current_id] = center_y
         annotated_frame = results[0].plot()
         cv2.line(
@@ -125,19 +143,19 @@ while cap.isOpened():
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
-df = pd.read_csv(csv_file)
-df["timestamp"] = pd.to_datetime(
-    df["timestamp"], 
-    format="%Y-%m-%d-%H:%M:%S"
-)
-
-hourly_counts = (
-    df.groupby(
-        df["timestamp"].dt.hour, 
-    )
-    .size()
-)
-print(hourly_counts)
+#df = pd.read_csv(csv_file)
+#df["timestamp"] = pd.to_datetime(
+#    df["timestamp"], 
+#    format="%Y-%m-%d-%H:%M:%S"
+#)
+#
+#hourly_counts = (
+#    df.groupby(
+#        df["timestamp"].dt.hour, 
+#    )
+#    .size()
+#)
+#print(hourly_counts)
 
 cap.release()
 cv2.destroyAllWindows()
