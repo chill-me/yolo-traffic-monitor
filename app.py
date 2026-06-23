@@ -25,20 +25,21 @@ def status():
         "total_count": total_count
     }
 
-@app.get("/hourly")
-def hourly():
-        df = pd.read_csv(csv_file)
-        df["timestamp"] = pd.to_datetime(
-            df["timestamp"], 
-            format="%Y-%m-%d-%H:%M:%S"
-        )
-        hourly_counts = (
-            df.groupby(
-                df["timestamp"].dt.hour, 
-            )
-            .size()
-        )
-        return hourly_counts.to_dict()
+#@app.get("/hourly")
+#def hourly():
+        #df = pd.read_csv(csv_file)
+        #df["timestamp"] = pd.to_datetime(
+        #    df["timestamp"], 
+        #    format="%Y-%m-%d-%H:%M:%S"
+        #)
+        #hourly_counts = (
+        #    df.groupby(
+        #        df["timestamp"].dt.hour, 
+        #    )
+        #    .size()
+        #)
+        #return hourly_counts.to_dict()
+
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
@@ -60,7 +61,7 @@ def dashboard():
             WHERE object_type = 'car'
             """
         )
-        
+
         cars = cursor.fetchone()[0]
 
         # persons = len(df[df["type"] == "person"])
@@ -68,7 +69,7 @@ def dashboard():
             """
             SELECT COUNT(*)
             FROM traffic
-            WHERRE object_type = 'person'
+            WHERE object_type = 'person'
             """
         )
         persons = cursor.fetchone()[0]
@@ -77,8 +78,6 @@ def dashboard():
         #     df["timestamp"], 
         #     format="%Y-%m-%d-%H:%M:%S"
         # )
-        conn.close()
-
         #hourly_counts = (
         #    df.groupby(
         #        df["timestamp"].dt.hour, 
@@ -89,29 +88,50 @@ def dashboard():
         #for hour, count in hourly_counts.to_dict().items():
         #    hourly_html += f"<p>{hour}時: {count}台</p>"
 
+        cursor.execute(
+                """
+                SELECT
+                    substr(timestamp, 12, 2) as hour, 
+                    COUNT(*)
+                FROM traffic
+                GROUP BY hour
+                ORDER BY hour
+                """
+        )
+        hourly_html = ""
+        labels = []
+        values = []
+
+        hourly_counts = cursor.fetchall()
+        for hour, count in hourly_counts:
+            hourly_html += f"<p>{hour}時: {count}台</p>"
+            labels.append(hour)
+            values.append(count)
+
+        conn.close()
+
+
         return f"""
                     <html>
                     <head>
                         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
                     </head>
+                    <body>
+
                     <canvas id="hourlyChart"></canvas>
 
                     <script>
 
-                    fetch("/hourly")
-                        .then(response => response.json())
-                        .then(data => {{
+                            const labels = {labels};
+                            const values = {values};
 
-                            const labels = Object.keys(data);
-                            const values = Object.values(data);
-
+                            <!-- JavaScript -->
                             new Chart(
                                 document.getElementById("hourlyChart"), 
                                 {{
                                     type: "bar",
                                     data: {{
                                         labels: labels, 
-
                                         datasets: [{{
                                             label: "Traffic Count", 
                                             data: values
@@ -119,10 +139,10 @@ def dashboard():
                                     }}
                                 }}
                             );
-                        }});
+                            <!-- JavaScript -->
+
                     </script>
 
-                        <body>
                             <h1>Traffic Monitor</h1>
 
                             <p>Cars: {cars}</p>
