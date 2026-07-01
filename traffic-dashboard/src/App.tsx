@@ -8,23 +8,16 @@ import {
     Tooltip,
     Legend,
     } from "chart.js";
-    
-import { Bar } from "react-chartjs-2";
 
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend
-);
+import StarusCard from "./components/StatusCard"
+import HourlyChart from "./components/HourlyChart"
 
 function App() {
-    const [status, setStatus] = useState<any>(null);
+    const [status, setStatus] = 
+        useState<Status | null>(null);
+
     useEffect(() => {
         const loadData = () => {
-            fetch("http://localhost:8000/status")
             .then(res => res.json())
             .then(data => {
                 console.log("取得データ:", data);
@@ -38,30 +31,35 @@ function App() {
 
         const timer = setInterval(
             loadData,
-            5000
+            30000
         );
+        return () => clearInterval(timer);
 
     }, []);
 
-    const [hourly, setHourly] = useState<any>({});
+    const [hourly, setHourly] =
+        useState<Hourly>({});
     useEffect(() => {
-        fetch("http://localhost:8000/hourly")
+        const loadData = () => {
             .then(res => res.json())
             .then(data => {
                 console.log("hourly", data);
                 setHourly(data);
+            })
+            .catch(err => {
+                console.error("Fetch Error:", err);
             });
+        };
+        loadData();
+
+        const timer = setInterval(
+            loadData,
+            30000
+        );
+        return () => clearInterval(timer);
+
     }, []);
 
-    const chartData = {
-        labels: Object.keys(hourly), 
-        datasets: [
-            {
-                label: "Vehicles per Hour", 
-                data: Object.values(hourly)
-            },
-        ],
-    };
     const options = {
         plugins: {
             title: {
@@ -82,12 +80,13 @@ function App() {
 
             {status && (
                 <>
-                    <p>Cars: {status.cars}</p>
-                    <p>Persons: {status.persons}</p>
-                    <p>Total: {status.total_count}</p>
-                    <Bar 
-                        data={chartData}
-                        options={options}
+                    <StarusCard
+                        cars={status.cars}
+                        persons={status.persons}
+                        total={status.total_count}
+                    />
+                    <HourlyChart
+                        {hourly}
                     />
                 </>
             )}

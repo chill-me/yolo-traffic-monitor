@@ -165,12 +165,6 @@ def dashboard():
 
                     </script>
 
-                            <h1>Traffic Monitor</h1>
-
-                            <p>Cars: {cars}</p>
-                            <p>Persons: {persons}</p>
-                            <p>Total Count: {total_count}</p>
-                            <h2>Hourly Statistics</h2>
                             {hourly_html}
                         </body>
                     </html>
